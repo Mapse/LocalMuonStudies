@@ -8,7 +8,6 @@
 #include "Geometry/RPCGeometry/interface/RPCGeomServ.h"
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
 #include "Geometry/CSCGeometry/interface/CSCGeometry.h"
-#include <DataFormats/MuonDetId/interface/CSCDetId.h>
 #include <Geometry/CommonDetUnit/interface/GeomDet.h>
 #include <Geometry/CSCGeometry/interface/CSCChamber.h>
 
