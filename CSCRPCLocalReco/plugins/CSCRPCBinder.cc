@@ -20,50 +20,79 @@ void CSCRPCBinder::initiate(edm::ESHandle<RPCGeometry>& RPCGeometryEH, edm::ESHa
 	rightRollswithCSCChamber.clear();
 	topRollswithCSCChamber.clear();
 	buttomRollswithCSCChamber.clear();
+
+	cout << "------------- Debugging the Binder between RPC and CSC -------------------------" << endl;
+	// dets returns a vector of all GeomDet (dets() is a vector and begin() is a iterator method)
 	for (TrackingGeometry::DetContainer::const_iterator it = RPCGeometryEH->dets().begin(); it < RPCGeometryEH->dets().end();it++) {
-
+        
 		if (dynamic_cast<const RPCChamber*>(*it) != nullptr) {
-
+            // Take each chamber from the geometry.
 			const RPCChamber* ch = dynamic_cast<const RPCChamber*>(*it);
-
+            
+			// Take the RPC rolls;
 			std::vector<const RPCRoll*> RPCRollPointerCollection = (ch->rolls());
+
+			// Descomment for see Re -1 Ri 1 St 4 Se 5 La 1 Su 3 Ro 2 Tr 0...
+			/* for (unsigned i = 0; i!=RPCRollPointerCollection.size(); ++i){
+				cout << RPCRollPointerCollection[i]->id() << endl;
+
+			} */
+			
 			for (std::vector<const RPCRoll*>::const_iterator RPCRollPointerIter = RPCRollPointerCollection.begin(); RPCRollPointerIter != RPCRollPointerCollection.end(); ++RPCRollPointerIter) {     
 
 				RPCDetId RPCRollId = (*RPCRollPointerIter)->id();
 				RPCGeomServ RPCServ(RPCRollId);
+				// Region: 0 for barrel, +/-1 for +/- endcap.
 				int RPCRegion = RPCRollId.region();
+				// Station: Each wheel (there are five wheels) of barrel has four stations (RB1, RB2, RB3, RB4)
+				// There are two Endcaps (+ and -) and four stations per endcap (RE+- 1 - 4).
 				int RPCStation = RPCRollId.station();
+				// Ring: For Barrel, a ring is the wheel ( W-2, W-1, W-0, W+1, W-2) and for Endcap, a ring is
+				// a physical ring.
 				int RPCRing = RPCRollId.ring();
+				// The number of the chamber. At endcap it goes from 0 to 36.
 				int RPCChamber = RPCServ.segment();
+				
+				// debug
 				if(debug) cout << "RPC Roll RPCRegion " << RPCRegion << " RPCStation " << RPCStation << " RPCRing " << RPCRing << " RPCChamber " << RPCChamber << endl;
+				
+				// Taking the data from RPC for do the CSC match
 				int CSCRegion = RPCRegion;
 				int CSCStation = RPCStation;
 				int CSCRing = RPCRing;
 				int CSCChamber = RPCChamber;
 				int CSCLayer = 0; // Layer=0 for whole CSC chamber with 6 layers
 
+				// We don't want RPC from barrel. 
 				if(RPCRegion == 0)
 					continue;
 				// For RPC Region is +1/-1 for +Z/-Z, while for CSC endcap is 1/2 for +Z/-Z
 				if(RPCRegion == -1)
 					CSCRegion = 2;
+				// Why?????????????????????????????????????????	
 				if(RPCStation == 4)
 					continue;
+				// Why not RPCRing 2 ??	
 				if((RPCStation == 2 || RPCStation == 3) && RPCRing == 3)
 					CSCRing = 2;
 
-				// For center CSC
+				// For center CSC (How do I know that is the center???????????????????????????????/)
 				CSCDetId CSCIndex(CSCRegion, CSCStation, CSCRing, CSCChamber, CSCLayer);
 				std::vector<RPCDetId> tempRPCRolls;
-				if(centerRollswithCSCChamber.find(CSCIndex) != centerRollswithCSCChamber.end())
+				// Takes the CSCs associated with RPC. CSCIndex is in centerRollswithCSCChamber.
+				if(centerRollswithCSCChamber.find(CSCIndex) != centerRollswithCSCChamber.end()){
+				    // Stores the required CSCIndex
 					tempRPCRolls = centerRollswithCSCChamber[CSCIndex];
-				tempRPCRolls.push_back(RPCRollId);
-				centerRollswithCSCChamber[CSCIndex] = tempRPCRolls;
-
+					// Stores the matcheds RPC with the center CSC
+				    tempRPCRolls.push_back(RPCRollId);
+				    centerRollswithCSCChamber[CSCIndex] = tempRPCRolls;
+				}
 				// For aside CSC
 				if(RPCStation == 1 && RPCRing == 2) {
+					// Find out left and right chamber. Remember that the chamber name increases counterclockwise
 					int leftChamber = (CSCChamber+RPCRegion+35)%36+1;
 					int rightChamber = (CSCChamber-RPCRegion+35)%36+1;
+					cout << "RPCRing: " << RPCRing << " and CSCRing: " << CSCRing << endl;
 					CSCDetId CSCIndex0(CSCRegion, CSCStation, CSCRing-1, CSCChamber, CSCLayer);
 					CSCDetId CSCIndex1(CSCRegion, CSCStation, CSCRing+1, CSCChamber, CSCLayer);
 					CSCDetId CSCIndex2(CSCRegion, CSCStation, CSCRing, leftChamber, CSCLayer);
@@ -72,28 +101,29 @@ void CSCRPCBinder::initiate(edm::ESHandle<RPCGeometry>& RPCGeometryEH, edm::ESHa
 					if(debug) cout << "leftChamber is " << leftChamber << ", rightChamber is " << rightChamber << endl;
 
 					std::vector<RPCDetId> RPCRolls_temp0;
-					if(topRollswithCSCChamber.find(CSCIndex0) != topRollswithCSCChamber.end())
+					if(topRollswithCSCChamber.find(CSCIndex0) != topRollswithCSCChamber.end()){
 						RPCRolls_temp0 = topRollswithCSCChamber[CSCIndex0];
-					RPCRolls_temp0.push_back(RPCRollId);
-					topRollswithCSCChamber[CSCIndex0] = RPCRolls_temp0;
-
+					    RPCRolls_temp0.push_back(RPCRollId);
+					    topRollswithCSCChamber[CSCIndex0] = RPCRolls_temp0;
+                    }
 					std::vector<RPCDetId> RPCRolls_temp1;
-					if(buttomRollswithCSCChamber.find(CSCIndex1) != buttomRollswithCSCChamber.end())
+					if(buttomRollswithCSCChamber.find(CSCIndex1) != buttomRollswithCSCChamber.end()){
 						RPCRolls_temp1 = buttomRollswithCSCChamber[CSCIndex1];
-					RPCRolls_temp1.push_back(RPCRollId);
-					buttomRollswithCSCChamber[CSCIndex1] = RPCRolls_temp1;
-
+					    RPCRolls_temp1.push_back(RPCRollId);
+					    buttomRollswithCSCChamber[CSCIndex1] = RPCRolls_temp1;
+                    }
 					std::vector<RPCDetId> RPCRolls_temp2;
-					if(leftRollswithCSCChamber.find(CSCIndex2) != leftRollswithCSCChamber.end())
+					if(leftRollswithCSCChamber.find(CSCIndex2) != leftRollswithCSCChamber.end()){
 						RPCRolls_temp2 = leftRollswithCSCChamber[CSCIndex2];
 					RPCRolls_temp2.push_back(RPCRollId);
 					leftRollswithCSCChamber[CSCIndex2] = RPCRolls_temp2;
-
+                    }
 					std::vector<RPCDetId> RPCRolls_temp3;
-					if(rightRollswithCSCChamber.find(CSCIndex3) != rightRollswithCSCChamber.end())
+					if(rightRollswithCSCChamber.find(CSCIndex3) != rightRollswithCSCChamber.end()){
 						RPCRolls_temp3 = rightRollswithCSCChamber[CSCIndex3];
 					RPCRolls_temp3.push_back(RPCRollId);
 					rightRollswithCSCChamber[CSCIndex3] = RPCRolls_temp3;
+					}
 				}
 
 				if(RPCStation == 1 && RPCRing == 3) {
@@ -150,6 +180,9 @@ void CSCRPCBinder::initiate(edm::ESHandle<RPCGeometry>& RPCGeometryEH, edm::ESHa
 						RPCRolls_temp3 = rightRollswithCSCChamber[CSCIndex3];
 					RPCRolls_temp3.push_back(RPCRollId);
 					rightRollswithCSCChamber[CSCIndex3] = RPCRolls_temp3;
+					//cout << "CSCRing: " << CSCRing << "RPCStation: " << RPCStation << " RPC Chamber: " << RPCChamber << " CSC Chamber: " << CSCChamber << "Left Chamber: " << leftChamber << " Right Chamber: " << rightChamber << " TopChamber: " << (CSCChamber+1)/2 << endl;
+					
+//Weirddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 				}
 
 				if(RPCStation != 1 && RPCRing == 3) {
@@ -171,6 +204,8 @@ void CSCRPCBinder::initiate(edm::ESHandle<RPCGeometry>& RPCGeometryEH, edm::ESHa
 						RPCRolls_temp3 = rightRollswithCSCChamber[CSCIndex3];
 					RPCRolls_temp3.push_back(RPCRollId);
 					rightRollswithCSCChamber[CSCIndex3] = RPCRolls_temp3;
+					cout << "CSCRing: " << CSCRing << " RPC Ring: " << RPCRing << " CSCStation: " << RPCStation << " RPC Chamber: " << RPCChamber << " CSC Chamber: " << CSCChamber << "Left Chamber: " << leftChamber << " Right Chamber: " << rightChamber << endl;
+
 				}
 			}// end RPC Roll Loop
 		}
